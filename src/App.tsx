@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Mic, MicOff, Settings, Info, Music, Circle, Square } from 'lucide-react';
 import { SmartAudioProcessor, HarmonyAnalysis } from './utils/audioProcessor';
 import { KeyDetector } from './utils/keyDetection';
@@ -24,6 +24,7 @@ function App() {
   const [isSavingRecording, setIsSavingRecording] = useState(false);
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
+  const [refreshRecordings, setRefreshRecordings] = useState(0);
   
   // Audio analysis state
   const [audioState, setAudioState] = useState<AudioState>(AudioState.IDLE);
@@ -126,6 +127,7 @@ function App() {
 
       if (recording) {
         console.log('Recording saved successfully:', recording);
+        setRefreshRecordings(prev => prev + 1);
       } else {
         console.error('Failed to save recording');
         setInitError('Failed to save recording. Please try again.');
@@ -525,7 +527,7 @@ function App() {
 
         {/* Recordings List */}
         <div className="mt-6">
-          <RecordingsList />
+          <RecordingsList key={refreshRecordings} />
         </div>
 
         {/* Enhanced Instructions */}

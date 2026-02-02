@@ -8,8 +8,14 @@ export class RecordingService {
     detectedMode: string = 'major'
   ): Promise<Recording | null> {
     try {
+      console.log('Starting recording save process...');
+      console.log('Blob size:', audioBlob.size, 'bytes');
+      console.log('Blob type:', audioBlob.type);
+      console.log('Duration:', duration, 'seconds');
+
       const timestamp = Date.now();
       const fileName = `recording-${timestamp}.webm`;
+      console.log('Uploading file:', fileName);
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('recordings')
@@ -19,32 +25,41 @@ export class RecordingService {
         });
 
       if (uploadError) {
-        console.error('Upload error:', uploadError);
+        console.error('Upload error details:', uploadError);
         throw uploadError;
       }
+
+      console.log('Upload successful:', uploadData);
 
       const { data: urlData } = supabase.storage
         .from('recordings')
         .getPublicUrl(fileName);
 
+      console.log('Public URL:', urlData.publicUrl);
+
+      const recordingData = {
+        title: `Recording ${new Date(timestamp).toLocaleString()}`,
+        audio_url: urlData.publicUrl,
+        duration,
+        detected_key: detectedKey,
+        detected_mode: detectedMode,
+        file_size: audioBlob.size,
+      };
+
+      console.log('Inserting record to database:', recordingData);
+
       const { data: recordData, error: insertError } = await supabase
         .from('recordings')
-        .insert({
-          title: `Recording ${new Date(timestamp).toLocaleString()}`,
-          audio_url: urlData.publicUrl,
-          duration,
-          detected_key: detectedKey,
-          detected_mode: detectedMode,
-          file_size: audioBlob.size,
-        })
+        .insert(recordingData)
         .select()
         .single();
 
       if (insertError) {
-        console.error('Insert error:', insertError);
+        console.error('Database insert error details:', insertError);
         throw insertError;
       }
 
+      console.log('Recording saved successfully to database:', recordData);
       return recordData;
     } catch (error) {
       console.error('Error saving recording:', error);
