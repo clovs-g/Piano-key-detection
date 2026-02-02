@@ -1,25 +1,29 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Mic, MicOff, Settings, Info, Music } from 'lucide-react';
+import { Mic, MicOff, Settings, Info, Music, Circle, Square } from 'lucide-react';
 import { SmartAudioProcessor, HarmonyAnalysis } from './utils/audioProcessor';
 import { KeyDetector } from './utils/keyDetection';
 import { MusicTheoryEngine } from './utils/musicTheory';
 import { AudioState, PitchData, KeyDetectionResult } from './types/audio';
 import { KeyOverride, Scale } from './types/music';
+import { AudioRecorder } from './utils/audioRecorder';
+import { RecordingService } from './services/recordingService';
 import AudioStatusIndicator from './components/AudioStatusIndicator';
 import KeyDisplay from './components/KeyDisplay';
 import PianoKeyboard from './components/PianoKeyboard';
-// import ChordPiano from './components/ChordPiano';
-// import AccompanimentGuide from './components/AccompanimentGuide';
 import PitchVisualizer from './components/PitchVisualizer';
-// import LeftHandChordPiano from './components/LeftHandChordPiano';
+import RecordingsList from './components/RecordingsList';
 
 function App() {
   // Audio processing state
   const [audioProcessor] = useState(() => new SmartAudioProcessor());
   const [keyDetector] = useState(() => new KeyDetector());
+  const [audioRecorder] = useState(() => new AudioRecorder());
   const [isRecording, setIsRecording] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
+  const [isSavingRecording, setIsSavingRecording] = useState(false);
+  const [isRecordingAudio, setIsRecordingAudio] = useState(false);
+  const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
   
   // Audio analysis state
   const [audioState, setAudioState] = useState<AudioState>(AudioState.IDLE);
@@ -55,7 +59,7 @@ function App() {
         console.log('Initializing enhanced audio processor...');
         const success = await audioProcessor.initialize();
         setIsInitialized(success);
-        
+
         if (!success) {
           setInitError('Failed to access microphone. Please check permissions.');
           console.error('Failed to initialize audio processor');
@@ -69,13 +73,71 @@ function App() {
         setIsInitialized(false);
       }
     };
-    
+
     initAudio();
-    
+
     return () => {
       audioProcessor.stop();
     };
   }, [audioProcessor]);
+
+  // Handle audio recording
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          sampleRate: 44100,
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+        }
+      });
+      setMediaStream(stream);
+      await audioRecorder.start(stream);
+      setIsRecordingAudio(true);
+      console.log('Recording started');
+    } catch (error) {
+      console.error('Failed to start recording:', error);
+      setInitError('Failed to start recording. Please check microphone permissions.');
+    }
+  }, [audioRecorder]);
+
+  const stopRecording = useCallback(async () => {
+    try {
+      setIsSavingRecording(true);
+      const { blob, duration } = await audioRecorder.stop();
+
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+        setMediaStream(null);
+      }
+
+      setIsRecordingAudio(false);
+
+      const currentKey = keyOverride.isActive
+        ? keyOverride.selectedKey
+        : (detectedKey?.key || '');
+      const currentMode = keyOverride.isActive
+        ? keyOverride.selectedMode
+        : (detectedKey?.mode || 'major');
+
+      console.log('Saving recording...');
+      const recording = await RecordingService.saveRecording(blob, duration, currentKey, currentMode);
+
+      if (recording) {
+        console.log('Recording saved successfully:', recording);
+      } else {
+        console.error('Failed to save recording');
+        setInitError('Failed to save recording. Please try again.');
+      }
+
+      setIsSavingRecording(false);
+    } catch (error) {
+      console.error('Failed to stop recording:', error);
+      setIsSavingRecording(false);
+      setIsRecordingAudio(false);
+    }
+  }, [audioRecorder, mediaStream, detectedKey, keyOverride]);
 
   // Enhanced audio data callback with rhythm and harmony analysis
   const handleAudioData = useCallback((data: {
@@ -273,11 +335,40 @@ function App() {
                   </>
                 )}
               </button>
-              
+
+              {isRecording && (
+                <button
+                  onClick={isRecordingAudio ? stopRecording : startRecording}
+                  disabled={isSavingRecording}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                    isRecordingAudio
+                      ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse'
+                      : 'bg-blue-500 hover:bg-blue-600 text-white'
+                  } ${isSavingRecording ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {isSavingRecording ? (
+                    <>
+                      <Circle className="w-4 h-4 animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : isRecordingAudio ? (
+                    <>
+                      <Square className="w-4 h-4" />
+                      <span>Stop Recording</span>
+                    </>
+                  ) : (
+                    <>
+                      <Circle className="w-4 h-4" />
+                      <span>Start Recording</span>
+                    </>
+                  )}
+                </button>
+              )}
+
               <button className="p-2 text-gray-400 hover:text-white transition-colors">
                 <Settings className="w-5 h-5" />
               </button>
-              
+
               <button className="p-2 text-gray-400 hover:text-white transition-colors">
                 <Info className="w-5 h-5" />
               </button>
@@ -432,6 +523,11 @@ function App() {
           </div>
         </div>
 
+        {/* Recordings List */}
+        <div className="mt-6">
+          <RecordingsList />
+        </div>
+
         {/* Enhanced Instructions */}
         {!isRecording && (
           <div className="mt-6 bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
@@ -444,6 +540,7 @@ function App() {
               <li>• Play single notes to see melody tracking, play multiple notes to see chord analysis</li>
               <li>• Rhythm detection shows tempo, beat patterns, and musical timing</li>
               <li>• Long-press any piano key to manually set the key signature</li>
+              <li>• <strong>Recording:</strong> Click "Start Recording" while listening to save your performance for later playback</li>
             </ul>
           </div>
         )}
