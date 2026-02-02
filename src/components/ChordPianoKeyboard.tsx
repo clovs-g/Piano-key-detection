@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { PianoKeyState, KeyOverride } from '../types/music';
 import { HarmonyAnalysis } from '../utils/audioProcessor';
+import { MusicTheoryEngine } from '../utils/musicTheory';
 
 interface ChordPianoKeyboardProps {
   chordNotes: string[];
@@ -114,10 +115,20 @@ const ChordPianoKeyboard: React.FC<ChordPianoKeyboardProps> = ({
     return '';
   };
 
+  const identifiedChord = chordNotes.length > 0 ? MusicTheoryEngine.identifyChord(chordNotes) : null;
+
   return (
     <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-white">Virtual Piano - Chord Display</h3>
+        <div className="flex items-center space-x-4">
+          <h3 className="text-lg font-semibold text-white">Virtual Piano - Chord Display</h3>
+          {identifiedChord && (
+            <div className="px-4 py-2 bg-blue-500/20 rounded-lg border border-blue-500/30">
+              <div className="text-xs text-blue-300 mb-1">Current Chord</div>
+              <div className="text-xl font-bold text-blue-400">{identifiedChord}</div>
+            </div>
+          )}
+        </div>
         <div className="text-xs text-gray-400">Long press any key to set manual override</div>
       </div>
       <div className="relative bg-gray-900 rounded-lg p-4 overflow-x-auto">

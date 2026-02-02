@@ -130,7 +130,62 @@ export class MusicTheoryEngine {
     const scale = this.getScale(key, mode);
     const sharps = scale.notes.filter(note => note.includes('#'));
     const flats = scale.notes.filter(note => note.includes('b'));
-    
+
     return { sharps, flats };
+  }
+
+  static identifyChord(notes: string[]): string | null {
+    if (!notes || notes.length === 0) return null;
+    if (notes.length === 1) return notes[0];
+    if (notes.length === 2) return `${notes[0]} + ${notes[1]}`;
+
+    const uniqueNotes = Array.from(new Set(notes)).sort((a, b) => {
+      const aIndex = NOTES.indexOf(a);
+      const bIndex = NOTES.indexOf(b);
+      return aIndex - bIndex;
+    });
+
+    if (uniqueNotes.length < 2) return uniqueNotes[0];
+
+    const root = uniqueNotes[0];
+    const intervals = uniqueNotes.slice(1).map(note => {
+      const rootIndex = NOTES.indexOf(root);
+      const noteIndex = NOTES.indexOf(note);
+      return (noteIndex - rootIndex + 12) % 12;
+    });
+
+    const intervalsStr = intervals.sort((a, b) => a - b).join(',');
+
+    const chordPatterns: { [key: string]: string } = {
+      '4,7': 'Major',
+      '3,7': 'Minor',
+      '3,6': 'Diminished',
+      '4,8': 'Augmented',
+      '4,7,10': 'Major 7',
+      '4,7,11': 'Dominant 7',
+      '3,7,10': 'Minor 7',
+      '3,6,10': 'Minor 7♭5',
+      '3,6,9': 'Diminished 7',
+      '5,7': 'Sus4',
+      '2,7': 'Sus2',
+      '4,7,9': 'Major 6',
+      '3,7,9': 'Minor 6',
+      '4,7,14': 'Major 9',
+      '4,7,11,14': 'Dominant 9',
+      '4,7,10,14': 'Major 9',
+      '3,7,10,14': 'Minor 9'
+    };
+
+    const chordType = chordPatterns[intervalsStr] || '';
+
+    if (chordType) {
+      return `${root}${chordType === 'Major' ? '' : chordType}`;
+    }
+
+    if (uniqueNotes.length >= 3) {
+      return `${root} (${uniqueNotes.slice(1).join(', ')})`;
+    }
+
+    return uniqueNotes.join(' + ');
   }
 }
