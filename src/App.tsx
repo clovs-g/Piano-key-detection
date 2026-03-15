@@ -13,6 +13,9 @@ import PianoKeyboard from './components/PianoKeyboard';
 import PitchVisualizer from './components/PitchVisualizer';
 import RecordingsList from './components/RecordingsList';
 import InstrumentalsList from './components/InstrumentalsList';
+import InstrumentalRecorder from './components/InstrumentalRecorder';
+import InstrumentalPlayer from './components/InstrumentalPlayer';
+import { Instrumental } from './lib/supabase';
 
 function App() {
   // Audio processing state
@@ -26,7 +29,8 @@ function App() {
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
   const [refreshRecordings, setRefreshRecordings] = useState(0);
-  
+  const [selectedInstrumental, setSelectedInstrumental] = useState<Instrumental | null>(null);
+
   // Audio analysis state
   const [audioState, setAudioState] = useState<AudioState>(AudioState.IDLE);
   const [amplitude, setAmplitude] = useState(-60);
@@ -526,9 +530,18 @@ function App() {
           </div>
         </div>
 
+        {/* Instrumental Recorder */}
+        <div className="mt-6">
+          <InstrumentalRecorder onRefresh={() => setRefreshRecordings(prev => prev + 1)} />
+        </div>
+
         {/* Instrumentals Library */}
         <div className="mt-6">
-          <InstrumentalsList key={refreshRecordings} onRefresh={() => setRefreshRecordings(prev => prev + 1)} />
+          <InstrumentalsList
+            key={refreshRecordings}
+            onInstrumentalSelect={setSelectedInstrumental}
+            onRefresh={() => setRefreshRecordings(prev => prev + 1)}
+          />
         </div>
 
         {/* Recordings List */}
@@ -553,6 +566,14 @@ function App() {
           </div>
         )}
       </main>
+
+      {/* Instrumental Player Modal */}
+      {selectedInstrumental && (
+        <InstrumentalPlayer
+          selectedInstrumental={selectedInstrumental}
+          onClose={() => setSelectedInstrumental(null)}
+        />
+      )}
     </div>
   );
 }
