@@ -12,6 +12,7 @@ import KeyDisplay from './components/KeyDisplay';
 import PianoKeyboard from './components/PianoKeyboard';
 import PitchVisualizer from './components/PitchVisualizer';
 import RecordingsList from './components/RecordingsList';
+import InstrumentalsList from './components/InstrumentalsList';
 
 function App() {
   // Audio processing state
@@ -523,6 +524,11 @@ function App() {
               {pitchHistory.length} samples
             </div>
           </div>
+        </div>
+
+        {/* Instrumentals Library */}
+        <div className="mt-6">
+          <InstrumentalsList key={refreshRecordings} onRefresh={() => setRefreshRecordings(prev => prev + 1)} />
         </div>
 
         {/* Recordings List */}

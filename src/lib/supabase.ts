@@ -19,3 +19,14 @@ export interface Recording {
   created_at: string;
   file_size: number;
 }
+
+export interface Instrumental {
+  id: string;
+  title: string;
+  audio_url: string;
+  duration: number;
+  tempo: number;
+  key: string;
+  created_at: string;
+  file_size: number;
+}
