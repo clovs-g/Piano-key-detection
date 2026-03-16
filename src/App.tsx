@@ -15,6 +15,7 @@ import RecordingsList from './components/RecordingsList';
 import InstrumentalsList from './components/InstrumentalsList';
 import InstrumentalRecorder from './components/InstrumentalRecorder';
 import InstrumentalPlayer from './components/InstrumentalPlayer';
+import LyricsDisplay from './components/LyricsDisplay';
 import { Instrumental } from './lib/supabase';
 
 function App() {
@@ -452,7 +453,7 @@ function App() {
             />
           </div>
 
-          {/* Middle & Right Columns - Dual Piano Display */}
+          {/* Middle & Right Columns - Melody Piano & Lyrics Display */}
           <div className="lg:col-span-2 space-y-6">
             {/* Melody Piano (Right Hand) */}
             <PianoKeyboard
@@ -468,20 +469,11 @@ function App() {
               title="Virtual Piano - Melody Display"
             />
 
-            {/* Chord Piano (Left Hand) - same style as melody piano */}
-            {/* Chord Piano (always visible, shows all combination notes) */}
-            {/* Chord Piano now uses the same component as the melody piano, but for chords */}
-            <PianoKeyboard
-              detectedNotes={detectedNotes}
-              scaleNotes={currentScale?.notes || []}
-              rootNote={rootNote}
-              onKeyOverride={handleKeyOverride}
-              keyOverride={keyOverride}
-              melodyNotes={chordNotes}
-              chordNotes={[]}
+            {/* Lyrics Display */}
+            <LyricsDisplay
               harmonyAnalysis={harmonyAnalysis}
-              showAllNotes={true}
-              title="Virtual Piano - Chord Display"
+              detectedKey={rootNote}
+              isRecording={isRecording}
             />
           </div>
         </div>
@@ -552,13 +544,14 @@ function App() {
         {/* Enhanced Instructions */}
         {!isRecording && (
           <div className="mt-6 bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-            <h3 className="text-blue-400 font-medium mb-2">Dual Piano Display - Melody & Harmony Separation:</h3>
+            <h3 className="text-blue-400 font-medium mb-2">Music Detection with Lyrics Display:</h3>
             <ul className="text-blue-300 text-sm space-y-1">
-              <li>• Click "Start Listening" to begin advanced audio detection with dual piano display</li>
-              <li>• <strong>Top Piano (Melody):</strong> <span className="text-green-400">Green keys</span> = Single melody notes (right hand/treble)</li>
-              <li>• <strong>Bottom Piano (Chords):</strong> <span className="text-blue-400">Blue keys</span> = Chord combinations (left hand/bass)</li>
-              <li>• The app automatically separates melody from harmony using advanced audio analysis</li>
-              <li>• Play single notes to see melody tracking, play multiple notes to see chord analysis</li>
+              <li>• Click "Start Listening" to begin advanced audio detection</li>
+              <li>• <strong>Piano Display:</strong> <span className="text-green-400">Green keys</span> = Detected melody notes in real-time</li>
+              <li>• <strong>Lyrics Display:</strong> Shows matching songs and their lyrics based on detected key and musical patterns</li>
+              <li>• The app automatically detects the musical key and suggests matching songs</li>
+              <li>• Lyrics automatically scroll to display song content</li>
+              <li>• Select different suggested songs to view alternative lyrics</li>
               <li>• Rhythm detection shows tempo, beat patterns, and musical timing</li>
               <li>• Long-press any piano key to manually set the key signature</li>
               <li>• <strong>Recording:</strong> Click "Start Recording" while listening to save your performance for later playback</li>
