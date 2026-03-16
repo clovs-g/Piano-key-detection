@@ -11,12 +11,24 @@ export class InstrumentalService {
     try {
       console.log('Starting instrumental save process...');
       const timestamp = Date.now();
-      const fileName = `instrumental-${timestamp}.webm`;
+
+      let fileExt = 'webm';
+      let contentType = 'audio/webm';
+
+      if (audioBlob.type.includes('mp4')) {
+        fileExt = 'mp4';
+        contentType = 'audio/mp4';
+      } else if (audioBlob.type.includes('wav')) {
+        fileExt = 'wav';
+        contentType = 'audio/wav';
+      }
+
+      const fileName = `instrumental-${timestamp}.${fileExt}`;
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('recordings')
         .upload(fileName, audioBlob, {
-          contentType: 'audio/webm',
+          contentType: contentType,
           cacheControl: '3600',
         });
 

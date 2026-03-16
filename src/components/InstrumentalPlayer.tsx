@@ -10,16 +10,32 @@ interface InstrumentalPlayerProps {
 
 const InstrumentalPlayer: React.FC<InstrumentalPlayerProps> = ({ selectedInstrumental, onClose }) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolume] = useState(0.7);
+  const [volume, setVolume] = useState(1);
   const [currentTime, setCurrentTime] = useState(0);
   const [totalTime, setTotalTime] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const contextRef = useRef<AudioContext | null>(null);
+  const gainNodeRef = useRef<GainNode | null>(null);
+  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
 
   useEffect(() => {
     if (!selectedInstrumental) return;
 
     const audio = new Audio(selectedInstrumental.audio_url);
+    audio.crossOrigin = 'anonymous';
     audioRef.current = audio;
+
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    contextRef.current = audioContext;
+
+    const gainNode = audioContext.createGain();
+    gainNodeRef.current = gainNode;
+    gainNode.connect(audioContext.destination);
+    gainNode.gain.value = volume;
+
+    const source = audioContext.createMediaElementAudioSource(audio);
+    sourceRef.current = source;
+    source.connect(gainNode);
 
     audio.onloadedmetadata = () => {
       setTotalTime(audio.duration);
@@ -36,8 +52,6 @@ const InstrumentalPlayer: React.FC<InstrumentalPlayerProps> = ({ selectedInstrum
       }
     }, 100);
 
-    audio.volume = volume;
-
     return () => {
       clearInterval(interval);
       audio.pause();
@@ -46,12 +60,15 @@ const InstrumentalPlayer: React.FC<InstrumentalPlayerProps> = ({ selectedInstrum
   }, [selectedInstrumental, volume]);
 
   const handlePlayPause = () => {
-    if (!audioRef.current) return;
+    if (!audioRef.current || !contextRef.current) return;
 
     if (isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
+      if (contextRef.current.state === 'suspended') {
+        contextRef.current.resume();
+      }
       audioRef.current.play();
       setIsPlaying(true);
     }
@@ -66,8 +83,8 @@ const InstrumentalPlayer: React.FC<InstrumentalPlayerProps> = ({ selectedInstrum
 
   const handleVolumeChange = (newVolume: number) => {
     setVolume(newVolume);
-    if (audioRef.current) {
-      audioRef.current.volume = newVolume;
+    if (gainNodeRef.current) {
+      gainNodeRef.current.gain.value = newVolume;
     }
   };
 
